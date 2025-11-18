@@ -4,12 +4,37 @@
 	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabase';
+	import BanditArm from '$lib/components/BanditArm.svelte';
+
+	interface BanditResult {
+		machineId: number;
+		mean: number;
+		variance: number;
+		betAmount: number;
+		payout: number;
+		netGain: number;
+		timestamp: Date;
+	}
 
 	let netid = '';
-	let diceResult = 0;
 	let isSubmitting = false;
 	let errorMessage = '';
-	let isRolling = false;
+	let balance = 100; // Starting balance
+	let results: BanditResult[] = [];
+
+	// Experiment parameters
+	const T = 50; // Total number of trials
+	let trialsRemaining = T;
+	let choices: number[] = []; // Array of machine IDs chosen (as integers)
+	let payoffs: number[] = []; // Array of payoffs received
+	let sessionComplete = false;
+
+	// Example machines with different parameters (IDs as numbers for choices array)
+	const machines = [
+		{ id: 1, label: 'A', mean: 8.5, variance: 4.0, color: '#3498db' },
+		{ id: 2, label: 'B', mean: 12.0, variance: 8.0, color: '#e74c3c' },
+		{ id: 3, label: 'C', mean: 6.0, variance: 2.0, color: '#2ecc71' }
+	];
 
 	onMount(() => {
 		netid = $page.url.searchParams.get('netid') || '';
@@ -17,115 +42,176 @@
 			goto(base || '/');
 			return;
 		}
-		rollDice();
 	});
 
-	function rollDice() {
-		isRolling = true;
-		errorMessage = '';
+	async function handlePull(result: BanditResult) {
+		if (trialsRemaining <= 0 || sessionComplete) return;
 
-		let rollCount = 0;
-		const maxRolls = 20;
-		let interval = 50; // Start fast
+		// Update local state
+		results = [result, ...results];
+		balance += result.netGain;
+		trialsRemaining--;
 
-		function animateRoll() {
-			diceResult = Math.floor(Math.random() * 6) + 1;
-			rollCount++;
+		// Add to research data arrays
+		choices.push(result.machineId);
+		payoffs.push(result.payout);
 
-			if (rollCount >= maxRolls) {
-				// Final result
-				diceResult = Math.floor(Math.random() * 6) + 1;
-				isRolling = false;
-				return;
-			}
-
-			// Gradually slow down
-			interval = interval + (rollCount * 10);
-			setTimeout(animateRoll, interval);
+		// Check if session is complete
+		if (trialsRemaining <= 0) {
+			sessionComplete = true;
+			await submitFinalData();
 		}
-
-		animateRoll();
 	}
 
-	async function submitScore() {
-		if (isRolling) return; // Prevent submission during roll
-
+	async function submitFinalData() {
 		isSubmitting = true;
-		errorMessage = '';
-
 		try {
 			const { error } = await supabase
 				.from('scores')
 				.insert({
 					netid,
-					data: { score: diceResult }
+					data: {
+						choices: choices,
+						payoffs: payoffs,
+						total_trials: T,
+						final_balance: balance,
+						session_completed: true,
+						timestamp: new Date().toISOString()
+					}
 				});
 
 			if (error) {
 				console.error('Supabase error:', error);
-				errorMessage = 'Failed to submit score. Please try again.';
+				errorMessage = 'Failed to save session data. Please try again.';
 			} else {
-				goto(`${base}/success`);
+				// Auto-redirect to success page after brief delay
+				setTimeout(() => {
+					goto(`${base}/success`);
+				}, 2000);
 			}
 		} catch (error) {
-			console.error('Error submitting score:', error);
-			errorMessage = 'Failed to submit score. Please try again.';
+			console.error('Error saving session:', error);
+			errorMessage = 'Failed to save session data. Please try again.';
 		} finally {
 			isSubmitting = false;
 		}
 	}
+
+	function finishSession() {
+		isSubmitting = true;
+		goto(`${base}/success`);
+	}
 </script>
 
-<div class="min-h-screen flex items-center justify-center bg-gray-50">
-	<div class="max-w-md w-full space-y-8">
-		<div>
-			<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-				Game Time!
-			</h2>
-			<p class="mt-2 text-center text-sm text-gray-600">
-				Player: {netid}
-			</p>
+<div class="min-h-screen bg-gray-900 py-8">
+	<div class="container mx-auto px-4">
+		<!-- Header -->
+		<div class="text-center mb-8">
+			<h1 class="text-4xl font-bold text-white mb-2">Multi-Armed Bandit</h1>
+			<p class="text-gray-300">Player: {netid}</p>
 		</div>
 
-		<div class="text-center">
-			<div class="inline-flex items-center justify-center w-32 h-32 bg-white border-2 border-gray-300 rounded-lg shadow-lg {isRolling ? 'animate-pulse' : ''}">
-				<span class="text-6xl font-bold text-indigo-600">
-					{diceResult}
-				</span>
+		<!-- Stats Dashboard -->
+		<div class="bg-gray-800 rounded-lg p-6 mb-8 max-w-2xl mx-auto">
+			<div class="grid grid-cols-4 gap-6 text-center">
+				<div>
+					<div class="text-2xl font-bold text-orange-400">{trialsRemaining}</div>
+					<div class="text-gray-400 text-sm">Trials Left</div>
+				</div>
+				<div>
+					<div class="text-2xl font-bold text-green-400">${balance.toFixed(2)}</div>
+					<div class="text-gray-400 text-sm">Balance</div>
+				</div>
+				<div>
+					<div class="text-2xl font-bold text-blue-400">{T - trialsRemaining}</div>
+					<div class="text-gray-400 text-sm">Completed</div>
+				</div>
+				<div>
+					<div class="text-2xl font-bold text-purple-400">
+						{results.length > 0 ? (balance - 100).toFixed(2) : '0.00'}
+					</div>
+					<div class="text-gray-400 text-sm">Net P&L</div>
+				</div>
 			</div>
-			<p class="mt-4 text-lg text-gray-700">
-				{#if isRolling}
-					Rolling...
-				{:else}
-					You rolled a {diceResult}!
-				{/if}
-			</p>
+
+			<!-- Progress Bar -->
+			<div class="mt-4">
+				<div class="bg-gray-700 rounded-full h-2">
+					<div
+						class="bg-orange-500 h-2 rounded-full transition-all duration-300"
+						style="width: {((T - trialsRemaining) / T) * 100}%"
+					></div>
+				</div>
+				<div class="text-center text-gray-400 text-xs mt-1">
+					{T - trialsRemaining} of {T} trials completed
+				</div>
+			</div>
 		</div>
 
-		<div class="space-y-4">
-			{#if errorMessage}
+		<!-- Error Message -->
+		{#if errorMessage}
+			<div class="max-w-2xl mx-auto mb-6">
 				<div class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-sm">
 					{errorMessage}
 				</div>
-			{/if}
+			</div>
+		{/if}
 
-			<button
-				type="button"
-				on:click={rollDice}
-				disabled={isRolling || isSubmitting}
-				class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-indigo-600 bg-white border-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-			>
-				{isRolling ? 'Rolling...' : 'Roll Again'}
-			</button>
-
-			<button
-				type="button"
-				on:click={submitScore}
-				disabled={isSubmitting || isRolling}
-				class="w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-			>
-				{isSubmitting ? 'Submitting...' : 'Submit Score'}
-			</button>
+		<!-- Bandit Arms -->
+		<div class="flex flex-wrap justify-center gap-8 mb-8">
+			{#each machines as machine}
+				<BanditArm
+					mean={machine.mean}
+					variance={machine.variance}
+					machineId={machine.id}
+					machineLabel={machine.label}
+					betAmount={10}
+					onPull={handlePull}
+					disabled={sessionComplete || trialsRemaining <= 0}
+				/>
+			{/each}
 		</div>
+
+		<!-- Session Complete Message -->
+		{#if sessionComplete}
+			<div class="max-w-2xl mx-auto bg-green-800 rounded-lg p-6 mb-8 text-center">
+				<h3 class="text-2xl font-bold text-white mb-2">Session Complete!</h3>
+				<p class="text-green-200 mb-4">
+					You completed all {T} trials. Your data has been saved.
+				</p>
+				<p class="text-green-300">
+					{#if isSubmitting}
+						Saving data and redirecting...
+					{:else}
+						Redirecting to results page...
+					{/if}
+				</p>
+			</div>
+		{/if}
+
+		<!-- Recent Results -->
+		{#if results.length > 0 && !sessionComplete}
+			<div class="max-w-2xl mx-auto bg-gray-800 rounded-lg p-6 mb-8">
+				<h3 class="text-xl font-bold text-white mb-4">Recent Results</h3>
+				<div class="space-y-2 max-h-48 overflow-y-auto">
+					{#each results.slice(0, 5) as result}
+						<div class="flex justify-between items-center bg-gray-700 rounded p-3">
+							<div class="flex items-center gap-3">
+								<span class="font-bold text-white">
+									Machine {machines.find(m => m.id === result.machineId)?.label || result.machineId}
+								</span>
+								<span class="text-gray-300">${result.payout.toFixed(2)}</span>
+							</div>
+							<span
+								class="font-bold {result.netGain >= 0 ? 'text-green-400' : 'text-red-400'}"
+							>
+								{result.netGain >= 0 ? '+' : ''}${result.netGain.toFixed(2)}
+							</span>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
+
 	</div>
 </div>

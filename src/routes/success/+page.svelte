@@ -7,29 +7,37 @@
 	}
 </script>
 
-<div class="min-h-screen flex items-center justify-center bg-gray-50">
-	<div class="max-w-md w-full space-y-8">
-		<div class="text-center">
-			<div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-				<svg class="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-				</svg>
-			</div>
-			<h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
-				Success!
-			</h2>
-			<p class="mt-2 text-center text-sm text-gray-600">
-				Your score has been submitted successfully.
-			</p>
-		</div>
+<div class="min-h-screen flex items-center justify-center bg-gray-900">
+	<div class="max-w-lg w-full space-y-8">
+		<div class="bg-gray-800 rounded-lg p-8 shadow-xl">
+			<div class="text-center">
+				<div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-600 mb-6">
+					<svg class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+					</svg>
+				</div>
 
-		<div>
+				<h2 class="text-3xl font-bold text-white mb-4">
+					Experiment Complete!
+				</h2>
+
+				<p class="text-gray-300 text-lg mb-6">
+					Thank you for participating in the multi-armed bandit experiment. Your data has been successfully recorded.
+				</p>
+
+				<div class="bg-gray-700 rounded-lg p-4 mb-6">
+					<p class="text-gray-400 text-sm">
+						Your session data including all machine choices and payoffs has been saved for research analysis.
+					</p>
+				</div>
+			</div>
+
 			<button
 				type="button"
 				on:click={playAgain}
-				class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+				class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
 			>
-				Play Again
+				Start New Session
 			</button>
 		</div>
 	</div>
