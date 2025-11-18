@@ -1,11 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 
 	let netid = '';
 
 	function handleSubmit() {
 		if (netid.trim()) {
-			goto(`/game?netid=${encodeURIComponent(netid)}`);
+			goto(`${base}/game?netid=${encodeURIComponent(netid)}`);
 		}
 	}
 </script>

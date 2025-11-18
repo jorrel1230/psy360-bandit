@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabase';
 
@@ -13,7 +14,7 @@
 	onMount(() => {
 		netid = $page.url.searchParams.get('netid') || '';
 		if (!netid) {
-			goto('/');
+			goto(base || '/');
 			return;
 		}
 		rollDice();
@@ -64,7 +65,7 @@
 				console.error('Supabase error:', error);
 				errorMessage = 'Failed to submit score. Please try again.';
 			} else {
-				goto('/success');
+				goto(`${base}/success`);
 			}
 		} catch (error) {
 			console.error('Error submitting score:', error);
