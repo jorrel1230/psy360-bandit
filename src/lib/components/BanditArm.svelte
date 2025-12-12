@@ -7,6 +7,14 @@
 	export let onPull: (result: BanditResult) => void;
 	export let disabled: boolean = false;
 
+	// Bimodal distribution parameters
+	export let bimodal: boolean = false;
+	export let mean1: number = 0;
+	export let mean2: number = 0;
+	export let variance1: number = 1;
+	export let variance2: number = 1;
+	export let weight1: number = 0.5; // Weight for first component
+
 	interface BanditResult {
 		machineId: number;
 		mean: number;
@@ -28,6 +36,18 @@
 		return mean + z * Math.sqrt(variance);
 	}
 
+	// Sample from bimodal Gaussian distribution
+	function bimodalGaussianRandom(): number {
+		// Choose which component to sample from
+		const useFirstComponent = Math.random() < weight1;
+
+		if (useFirstComponent) {
+			return gaussianRandom(mean1, variance1);
+		} else {
+			return gaussianRandom(mean2, variance2);
+		}
+	}
+
 	async function pullArm() {
 		if (isPulling || disabled) return;
 
@@ -36,8 +56,8 @@
 		// Add some visual delay for the pulling animation
 		await new Promise(resolve => setTimeout(resolve, 800));
 
-		// Sample from Gaussian distribution
-		const payout = gaussianRandom(mean, variance);
+		// Sample from appropriate distribution
+		const payout = bimodal ? bimodalGaussianRandom() : gaussianRandom(mean, variance);
 		const netGain = payout - betAmount;
 
 		const result: BanditResult = {
@@ -88,7 +108,7 @@
 			on:click={pullArm}
 			disabled={isPulling || disabled}
 		>
-			{disabled ? 'Session Complete' : isPulling ? 'Pulling...' : 'Pull Arm'}
+			{disabled ? 'Session Complete' : isPulling ? 'Pulling...' : `Pull Arm - $${betAmount.toFixed(2)}`}
 		</button>
 	</div>
 </div>
@@ -125,6 +145,7 @@
 		margin: 0;
 		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
 	}
+
 
 	.display-screen {
 		background: #1a1a1a;

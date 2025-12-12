@@ -19,11 +19,11 @@
 	let netid = '';
 	let isSubmitting = false;
 	let errorMessage = '';
-	let balance = 100; // Starting balance
+	let balance = 200; // Starting balance
 	let results: BanditResult[] = [];
 
 	// Experiment parameters
-	const T = 50; // Total number of trials
+	const T = 100; // Total number of trials
 	let trialsRemaining = T;
 	let choices: number[] = []; // Array of machine IDs chosen (as integers)
 	let payoffs: number[] = []; // Array of payoffs received
@@ -31,10 +31,28 @@
 
 	// Example machines with different parameters (IDs as numbers for choices array)
 	const machines = [
-		{ id: 1, label: 'A', mean: 8.5, variance: 4.0, color: '#3498db' },
-		{ id: 2, label: 'B', mean: 12.0, variance: 8.0, color: '#e74c3c' },
-		{ id: 3, label: 'C', mean: 6.0, variance: 2.0, color: '#2ecc71' }
+		// Standard gaussian machines
+		{ id: 1, label: 'A', mean: 22.0, variance: 12.0, cost: 20, color: '#e74c3c' }, // $22 mean, $20 cost → +$2.00 profit (best expected value)
+		{ id: 2, label: 'B', mean: 16.0, variance: 8.0, cost: 18, color: '#2ecc71' }, // $16 mean, $18 cost → -$2.00 profit
+		{ id: 3, label: 'C', mean: 19.5, variance: 3.0, cost: 20, color: '#f39c12' }, // $19.5 mean, $20 cost → -$0.50 profit
+		// Bimodal machines: {mean1, mean2, variance1, variance2, weight1}
+		{ id: 4, label: 'D', bimodal: true, mean1: 8.0, mean2: 35.0, variance1: 2.0, variance2: 2.0, weight1: 0.65, cost: 15, color: '#e67e22' }, // 0.65*(8) + 0.35*(35) = 5.2 + 12.25 = 17.45 payout, $15 cost → +$2.45 profit, decent $35 wins
+		{ id: 5, label: 'E', bimodal: true, mean1: 10.0, mean2: 40.0, variance1: 2.5, variance2: 2.5, weight1: 0.65, cost: 20, color: '#34495e' }, // 0.65*(10) + 0.35*(40) = 6.5 + 14 = 20.5 payout, $20 cost → +$0.50 profit, decent $40 wins
+		{ id: 6, label: 'F', bimodal: true, mean1: 5.0, mean2: 80.0, variance1: 4.0, variance2: 4.0, weight1: 0.75, cost: 25, color: '#95a5a6' } // 0.75*(5) + 0.25*(80) = 3.75 + 20 = 23.75 payout, $25 cost → -$1.25 profit, but huge $80 wins
 	];
+
+	// Shuffled machines for display (randomized order per visitor)
+	let shuffledMachines = [...machines];
+
+	// Fisher-Yates shuffle algorithm
+	function shuffleArray(array: any[]) {
+		const shuffled = [...array];
+		for (let i = shuffled.length - 1; i > 0; i--) {
+			const j = Math.floor(Math.random() * (i + 1));
+			[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+		}
+		return shuffled;
+	}
 
 	onMount(() => {
 		netid = $page.url.searchParams.get('netid') || '';
@@ -42,6 +60,9 @@
 			goto(base || '/');
 			return;
 		}
+
+		// Shuffle machines for this visitor
+		shuffledMachines = shuffleArray(machines);
 	});
 
 	async function handlePull(result: BanditResult) {
@@ -128,7 +149,7 @@
 				</div>
 				<div>
 					<div class="text-2xl font-bold text-purple-400">
-						{results.length > 0 ? (balance - 100).toFixed(2) : '0.00'}
+						{results.length > 0 ? (balance - 200).toFixed(2) : '0.00'}
 					</div>
 					<div class="text-gray-400 text-sm">Net P&L</div>
 				</div>
@@ -159,15 +180,21 @@
 
 		<!-- Bandit Arms -->
 		<div class="flex flex-wrap justify-center gap-8 mb-8">
-			{#each machines as machine}
+			{#each shuffledMachines as machine, index}
 				<BanditArm
-					mean={machine.mean}
-					variance={machine.variance}
+					mean={machine.mean || 0}
+					variance={machine.variance || 1}
 					machineId={machine.id}
-					machineLabel={machine.label}
-					betAmount={10}
+					machineLabel={String.fromCharCode(65 + index)}
+					betAmount={machine.cost || 10}
 					onPull={handlePull}
 					disabled={sessionComplete || trialsRemaining <= 0}
+					bimodal={machine.bimodal || false}
+					mean1={machine.mean1 || 0}
+					mean2={machine.mean2 || 0}
+					variance1={machine.variance1 || 1}
+					variance2={machine.variance2 || 1}
+					weight1={machine.weight1 || 0.5}
 				/>
 			{/each}
 		</div>
@@ -198,7 +225,7 @@
 						<div class="flex justify-between items-center bg-gray-700 rounded p-3">
 							<div class="flex items-center gap-3">
 								<span class="font-bold text-white">
-									Machine {machines.find(m => m.id === result.machineId)?.label || result.machineId}
+									Machine {String.fromCharCode(65 + shuffledMachines.findIndex(m => m.id === result.machineId))}
 								</span>
 								<span class="text-gray-300">${result.payout.toFixed(2)}</span>
 							</div>
