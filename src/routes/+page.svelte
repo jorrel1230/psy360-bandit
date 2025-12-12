@@ -19,7 +19,7 @@
 				Experiment
 			</h2>
 			<p class="text-gray-400 mb-8">
-				You'll be playing 50 rounds with different slot machines. Each machine has unknown payout rates that you'll need to learn through experience.
+				You'll be playing 100 rounds with different slot machines. Each machine has different distributions and costs that you'll need to learn through experience.
 			</p>
 		</div>
 
