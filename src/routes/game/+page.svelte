@@ -105,9 +105,9 @@
 				console.error('Supabase error:', error);
 				errorMessage = 'Failed to save session data. Please try again.';
 			} else {
-				// Auto-redirect to success page after brief delay
+				// Auto-redirect to leaderboard page with player highlighting after brief delay
 				setTimeout(() => {
-					goto(`${base}/success`);
+					goto(`${base}/leaderboard?player=${encodeURIComponent(netid)}`);
 				}, 2000);
 			}
 		} catch (error) {
