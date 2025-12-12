@@ -23,7 +23,7 @@
 	let results: BanditResult[] = [];
 
 	// Experiment parameters
-	const T = 100; // Total number of trials
+	const T = 150; // Total number of trials
 	let trialsRemaining = T;
 	let choices: number[] = []; // Array of machine IDs chosen (as integers)
 	let payoffs: number[] = []; // Array of payoffs received
@@ -89,7 +89,7 @@
 		try {
 			const { error } = await supabase
 				.from('scores')
-				.insert({
+				.upsert({
 					netid,
 					data: {
 						choices: choices,
@@ -99,6 +99,8 @@
 						session_completed: true,
 						timestamp: new Date().toISOString()
 					}
+				}, {
+					onConflict: 'netid'
 				});
 
 			if (error) {
