@@ -23,22 +23,36 @@
 	let results: BanditResult[] = [];
 
 	// Experiment parameters
-	const T = 150; // Total number of trials
+	const T = 100; // Total number of trials
 	let trialsRemaining = T;
 	let choices: number[] = []; // Array of machine IDs chosen (as integers)
 	let payoffs: number[] = []; // Array of payoffs received
 	let sessionComplete = false;
 
-	// Example machines with different parameters (IDs as numbers for choices array)
 	const machines = [
-		// Standard gaussian machines
-		{ id: 1, label: 'A', mean: 22.0, variance: 12.0, cost: 20, color: '#e74c3c' }, // $22 mean, $20 cost → +$2.00 profit (best expected value)
-		{ id: 2, label: 'B', mean: 16.0, variance: 8.0, cost: 18, color: '#2ecc71' }, // $16 mean, $18 cost → -$2.00 profit
-		{ id: 3, label: 'C', mean: 19.5, variance: 3.0, cost: 20, color: '#f39c12' }, // $19.5 mean, $20 cost → -$0.50 profit
-		// Bimodal machines: {mean1, mean2, variance1, variance2, weight1}
-		{ id: 4, label: 'D', bimodal: true, mean1: 8.0, mean2: 35.0, variance1: 2.0, variance2: 2.0, weight1: 0.65, cost: 15, color: '#e67e22' }, // 0.65*(8) + 0.35*(35) = 5.2 + 12.25 = 17.45 payout, $15 cost → +$2.45 profit, decent $35 wins
-		{ id: 5, label: 'E', bimodal: true, mean1: 10.0, mean2: 40.0, variance1: 2.5, variance2: 2.5, weight1: 0.65, cost: 20, color: '#34495e' }, // 0.65*(10) + 0.35*(40) = 6.5 + 14 = 20.5 payout, $20 cost → +$0.50 profit, decent $40 wins
-		{ id: 6, label: 'F', bimodal: true, mean1: 5.0, mean2: 80.0, variance1: 4.0, variance2: 4.0, weight1: 0.75, cost: 25, color: '#95a5a6' } // 0.75*(5) + 0.25*(80) = 3.75 + 20 = 23.75 payout, $25 cost → -$1.25 profit, but huge $80 wins
+		// Gaussian machine with moderate variance
+		// Expected profit: +$2.00
+		{ id: 1, label: 'A', mean: 22.0, variance: 12.0, cost: 20, color: '#e74c3c' },
+
+		// Gaussian machine with moderate variance
+		// Expected profit: -$2.00
+		{ id: 2, label: 'B', mean: 16.0, variance: 8.0, cost: 18, color: '#2ecc71' },
+
+		// Safe gaussian machine with very low variance
+		// Expected profit: +$0.50
+		{ id: 3, label: 'C', mean: 15.5, variance: 0.1, cost: 15, color: '#f39c12' },
+
+		// High-risk bimodal machine (80% small win, 20% big win)
+		// Expected profit: +$3.00
+		{ id: 4, label: 'D', bimodal: true, mean1: 10.0, mean2: 100.0, variance1: 2.0, variance2: 10.0, weight1: 0.8, cost: 25, color: '#e67e22' },
+
+		// Moderate-risk bimodal machine (65% small win, 35% medium win)
+		// Expected profit: +$0.50
+		{ id: 5, label: 'E', bimodal: true, mean1: 10.0, mean2: 40.0, variance1: 2.5, variance2: 2.5, weight1: 0.65, cost: 20, color: '#34495e' },
+
+		// Very high-risk bimodal machine (75% tiny win, 25% huge win)
+		// Expected profit: -$1.25
+		{ id: 6, label: 'F', bimodal: true, mean1: 5.0, mean2: 80.0, variance1: 4.0, variance2: 4.0, weight1: 0.75, cost: 25, color: '#95a5a6' }
 	];
 
 	// Shuffled machines for display (randomized order per visitor)
@@ -89,7 +103,7 @@
 		try {
 			const { error } = await supabase
 				.from('scores')
-				.upsert({
+				.insert({
 					netid,
 					data: {
 						choices: choices,
@@ -99,8 +113,6 @@
 						session_completed: true,
 						timestamp: new Date().toISOString()
 					}
-				}, {
-					onConflict: 'netid'
 				});
 
 			if (error) {

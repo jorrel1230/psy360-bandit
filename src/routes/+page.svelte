@@ -34,7 +34,7 @@
 			}
 
 			if (data && data.length > 0) {
-				validationError = 'This name is already taken. Please choose a different name.';
+				validationError = 'This name has already been used for the experiment. Please choose a different name.';
 				return;
 			}
 
@@ -68,7 +68,7 @@
 					Imagine you have found $200 on the side of the road and want to try your luck at the casino. This casino only has 6 slot machines for you to play, and you don't have much time. Each slot machine is different: they each have a different cost to play, a different probability of winning, and different win sizes. Naturally, the casino won't tell you any of this highly secret information. Your task is simple: try to win the most money!
 				</p>
 				<p>
-					If you would like to take the experiment multiple times, we ask that you please use the same nickname for data reliability. Good luck!
+					<strong>Please note:</strong> Each participant can only take this experiment once. Choose a unique name that hasn't been used before. Good luck!
 				</p>
 			</div>
 		</div>
